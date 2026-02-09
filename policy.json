@@ -1,0 +1,23 @@
+{
+  "version": "1.1.0",
+  "last_updated": "2026-02-08",
+  "security_levels": {
+    "PII_DETECTION": true,
+    "SENSITIVE_DATA_DETECTION": true,
+    "BANNED_KEYWORDS": true
+  },
+  "patterns": {
+    "SSN (Social Security Number)": "\\b\\d{3}-\\d{2}-\\d{4}\\b",
+    "US Phone Number": "(\\(\\d{3}\\)\\s?|\\d{3}-)\\d{3}-\\d{4}",
+    "US Passport Number": "\\b[A-Z0-9]{9}\\b",
+    "Credit Card (General)": "\\b(?:\\d{4}[ -]?){3}\\d{4}\\b",
+    "API Key / Secret": "(?i)(api[_-]?key|secret|token|password|auth)['\"]?\\s*[:=]\\s*['\"]?[a-zA-Z0-9]{16,40}['\"]?",
+    "Private Key (RSA/SSH)": "-----BEGIN [A-Z ]+ PRIVATE KEY-----"
+  },
+  "banned_keywords": [
+    "bomb", "hack", "explosive", "suicide", "meth", "fentanyl",
+    "social security number", "passport photo", "private key",
+    "unauthorized access", "sql injection", "bypass authentication"
+  ],
+  "system_message": "SECURITY ALERT: Your request was blocked due to a violation of US Data Privacy & AI Governance policies."
+}

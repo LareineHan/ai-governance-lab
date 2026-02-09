@@ -1,46 +1,98 @@
-from flask import Flask, request, jsonify  
-import sqlite3  
-from datetime import datetime  
-import os  
+from flask import Flask, request, jsonify, render_template
+import sqlite3
+from datetime import datetime
+import os
+import re
+from google import genai
+from google.genai import types
+from conditions import AISecurityManager
 
-app = Flask(__name__)  
+app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
 
-# DB 테이블 만들기 (처음 한 번만 실행됨)
-def init_db():  
-    conn = sqlite3.connect('ai_log.db')  
-    conn.execute('''CREATE TABLE IF NOT EXISTS logs 
-                    (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                     user TEXT, 
-                     question TEXT, 
-                     time DATETIME)''')  
-    conn.commit()  
-    conn.close()  
+# --- [AI Governance: Security Manager] ---
 
-# 로그 저장 함수
-def save_log(user, question):  
-    conn = sqlite3.connect('ai_log.db')  
-    conn.execute("INSERT INTO logs (user, question, time) VALUES (?, ?, ?)", 
-                 (user, question, datetime.now()))  
-    conn.commit()  
-    conn.close()  
 
-# 메인 엔드포인트: /ask 로 들어오는 요청 처리
-@app.route('/ask', methods=['GET'])  
-def ask():  
-    user = request.args.get('user')          # ?user=이름 이런 식으로 전달
-    q = request.args.get('q')                # ?q=질문내용
-    if not user or not q:
-        return jsonify({"error": "user와 q 파라미터가 필요합니다"}), 400
+security_mgr = AISecurityManager()
+
+# --- [Gemini API Setup] ---
+client = genai.Client(
+    api_key=os.environ.get("GEMINI_API_KEY"),
+    http_options=types.HttpOptions(api_version='v1alpha')
+)
+MODEL_NAME = "models/gemini-3-flash-preview"
+
+# --- [Database Logic] ---
+def init_db():
+    with sqlite3.connect('ai_log.db') as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS logs
+                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                         user TEXT, question TEXT, status TEXT, time DATETIME)''')
+        conn.commit()
+
+def save_log(user, question, status):
+    with sqlite3.connect('ai_log.db') as conn:
+        conn.execute("INSERT INTO logs (user, question, status, time) VALUES (?, ?, ?, ?)",
+                     (user, question, status, datetime.now()))
+
+# --- [Routes] ---
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/ask', methods=['GET'])
+def ask():
+    user = request.args.get('user', 'anonymous')
+    question = request.args.get('q', '')
+
+    if not question:
+        return jsonify({"error": "Question is empty"}), 400
+
+    # 1. 보안 스캔 실행
+    scan_result = security_mgr.scan(question)
     
-    # 로그 저장 (가장 핵심!)
-    save_log(user, q)
-    
-    # 여기서는 실제 AI 호출 대신 그냥 에코로 답변 (테스트용)
-    answer = f"AI가 답변합니다: {q}"   # 나중에 Grok이나 다른 API로 바꿀 부분
-    
-    return jsonify({"answer": answer, "logged": True})
+    if scan_result["is_blocked"]:
+        save_log(user, question, f"BLOCKED: {scan_result['reason']}")
+        # 보안 위반 시 403 에러와 사유 반환
+        return jsonify({
+            "answer": f"보안 위반: {scan_result['reason']}",
+            "blocked": True,
+            "reason": scan_result['reason']
+        }), 403
 
-# 서버 시작 전에 DB 초기화
+    # 2. 안전할 경우 AI 호출
+    try:
+        response = client.models.generate_content(model=MODEL_NAME, contents=question)
+        answer = response.text.strip()
+        save_log(user, question, "SUCCESS")
+        return jsonify({"answer": answer, "blocked": False})
+    except Exception as e:
+        return jsonify({"answer": f"API Error: {str(e)}", "blocked": False}), 500
+
 if __name__ == '__main__':
-    init_db()               # 프로그램 시작 시 DB 테이블 자동 생성
+    init_db()
     app.run(host='0.0.0.0', port=8080, debug=True)
+
+@app.route('/admin/logs')
+def view_logs():
+    with sqlite3.connect('ai_log.db') as conn:
+        conn.row_factory = sqlite3.Row # 결과를 딕셔너리 형태로 받기 위해
+        cursor = conn.execute("SELECT * FROM logs ORDER BY time DESC")
+        logs = cursor.fetchall()
+    
+    # 간단한 HTML 테이블로 출력
+    html = """
+    <h2>🔒 Security Audit Logs</h2>
+    <table border="1" style="width:100%; border-collapse: collapse;">
+        <tr style="background-color: #eee;">
+            <th>ID</th><th>User</th><th>Question</th><th>Status</th><th>Time</th>
+        </tr>
+    """
+    for log in logs:
+        # 차단된 로그는 빨간색으로 표시 (거버넌스 강조)
+        color = "red" if "BLOCKED" in log['status'] else "black"
+        html += f"<tr style='color: {color}'>"
+        html += f"<td>{log['id']}</td><td>{log['user']}</td><td>{log['question']}</td><td>{log['status']}</td><td>{log['time']}</td>"
+        html += "</tr>"
+    html += "</table><br><a href='/'>Back to Dashboard</a>"
+    return html
