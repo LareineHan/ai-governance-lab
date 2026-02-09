@@ -1,46 +1,65 @@
-#🛡️ AI Governance & Security Lab
+# 🛡️ AI Governance & Security Lab
+### *Self-Initiated Research on Data Privacy & Policy Enforcement for LLMs*
 
-##Self-Initiated Research on Data Privacy & Policy Enforcement for LLMs
-📝 Project Motivation
-As a student passionate about Information Security and a contributor at the AI Hub, I initiated this project to bridge the gap between AI innovation and data protection.
+## 📝 Project Motivation
+As a student passionate about **Information Security** and a contributor at the **AI Hub**, I initiated this project to bridge the gap between AI innovation and data protection. 
 
 I wanted to move beyond theoretical knowledge and understand the architectural challenges of securing Large Language Models (LLMs). This project is the result of my self-motivated research into how organizations can implement "Guardrails" to prevent the leakage of sensitive data (PII) and credentials during AI interactions.
 
-##🏗️ Project Structure
-To understand modular design and policy management, I structured the project as follows:
+---
 
-security_ai.py: The core Flask application that handles the AI service logic and integrates the security layer.
+## 🏗️ Project Structure
+To understand modular design and policy management, I structured the project into specialized components:
 
-conditions.py: A dedicated security engine class (AISecurityManager) that executes scanning and detection logic.
+* **`security_ai.py`**: The core Flask application that handles the AI service logic and integrates the security layer.
+* **`conditions.py`**: A dedicated security engine class (`AISecurityManager`) that executes scanning and detection logic.
+* **`policy.json`**: A decoupled policy configuration file for managing security rules (SSN, Passport, Secrets, etc.) without altering the source code.
+* **`templates/index.html`**: A real-time security dashboard for monitoring and testing.
 
-policy.json: A decoupled policy configuration file for managing security rules (SSN, Passport, Secrets, etc.) without altering the source code.
+---
 
-##🔍 Core Learning Objectives
+## 🔍 Core Learning Objectives
 Through this project, I explored several key domains of Information Security:
 
-DLP (Data Loss Prevention): Learning how to intercept and scan real-time traffic for sensitive US-based PII (SSN, Passport numbers).
+1.  **DLP (Data Loss Prevention)**: Implementing real-time traffic scanning for sensitive US-based PII such as Social Security Numbers (SSN) and Passport numbers.
+2.  **Secrets Management**: Identifying accidental exposure of API keys, tokens, and private keys within user prompts.
+3.  **Governance as Code**: Implementing a system where security policies are managed through a centralized JSON configuration, mimicking enterprise-level policy management.
+4.  **Audit & Compliance**: Building an automated audit trail using SQLite to understand how security incidents are recorded for forensic analysis.
 
-Secrets Management: Identifying accidental exposure of API keys, tokens, and private keys within prompts.
+---
 
-Governance as Code: Implementing a system where security policies are managed through JSON, mimicking enterprise-level policy management.
+## 🛠️ Security Policy Overview (`policy.json`)
+The system follows a **"Scan-then-Send"** architecture. Key detection patterns calibrated for US compliance include:
 
-Audit & Compliance: Building an audit trail using SQLite to understand how security incidents are recorded and monitored.
+* **US PII**: Social Security Numbers (SSN), Passport Numbers, and US Phone formats.
+* **Sensitive Data**: Credit Card patterns and Private RSA Keys.
+* **Credentials**: Regex-based detection for API Keys and Auth Secrets.
+* **Policy Enforcement**: Filtering prompts related to unauthorized access or cyber threats.
 
-##🛠️ Security Policy Overview (policy.json)
-The system follows a "Deny by Default" or "Scan then Send" approach. Key detection patterns include:
+---
 
-US PII: Social Security Numbers, Passport Numbers, and Phone patterns.
+## 🚀 Getting Started (Codespaces)
 
-Credentials: Regex-based detection for API Keys and Auth Secrets.
+1.  **Set Environment Variable**:
+    ```bash
+    export GEMINI_API_KEY='your_api_key_here'
+    ```
+2.  **Run the Application**:
+    ```bash
+    python security_ai.py
+    ```
+3.  **Access the Lab**:
+    Open the forwarded port (default: `8080`) to access the **Security Dashboard**.
 
-Dangerous Keywords: Filtering prompts related to unauthorized access or cyber threats.
+---
 
-##🚀 How to Run the Lab
-Set up your Gemini API Key as an environment variable.
+## 💡 Future Roadmap
+This is an ongoing research project. My goal is to continue evolving this lab by exploring:
+* **Data Masking/Redaction**: Automatically obfuscating PII instead of just blocking.
+* **Adversarial Prompt Testing**: Researching "Prompt Injection" attacks and defensive strategies.
+* **NIST AI RMF Alignment**: Mapping security logs to international AI risk management frameworks.
 
-Run python security_ai.py.
+---
 
-Monitor real-time security logs at http://localhost:8080.
-
-##💡 Reflection
-This is an ongoing research project. My goal is to continue evolving this lab by exploring more advanced topics like Contextual Masking (Redaction) and Adversarial Prompt Testing (Red Teaming) to further my expertise in AI Security.
+### 👨‍💻 About the Author
+I am a student researcher focused on the intersection of **
